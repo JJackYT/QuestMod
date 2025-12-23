@@ -1,0 +1,66 @@
+{
+  "Jack's Quests": {
+    "DirtQuest": {
+      "Sprite": "DirtBlock",
+      "Description": "Collect Dirt",
+      "Position": {
+        "X": 100,
+        "Y": 100
+      },
+      "Quests": {
+        "DirtBlock": 5
+      },
+      "Rewards": {
+
+      },
+      "Dependencies": []
+    },
+    "StoneQuest": {
+      "Sprite": "StoneBlock",
+      "Description": "Collect Stone",
+      "Position": {
+        "X": 200,
+        "Y": 100
+      },
+      "Quests": {
+        "StoneBlock": 5
+      },
+      "Rewards": {
+
+      },
+      "Dependencies": []
+    },
+    "FurnaceQuest": {
+      "Sprite": "Furnace",
+      "Description": "Make A Furnace",
+      "Position": {
+        "X": 300,
+        "Y": 100
+      },
+      "Quests": {
+        "Furnace": 1
+      },
+      "Rewards": {
+
+      },
+      "Dependencies": [ "StoneQuest" ]
+    }
+  },
+  "ExamplePage": {
+    "ExampleQuest": {
+      "Sprite": "DirtBlock",
+      "Description": "Example Quest",
+      "Position": {
+        "X": 50,
+        "Y": 50
+      },
+      "Quests": {
+        "DirtBlock": 5
+      },
+      "Rewards": {
+        "StoneBlock": 5
+      },
+      "Dependencies": {}
+    }
+  }
+}

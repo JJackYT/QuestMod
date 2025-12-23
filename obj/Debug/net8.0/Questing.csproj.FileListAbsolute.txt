@@ -1,0 +1,12 @@
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\bin\Debug\net8.0\Questing.deps.json
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\bin\Debug\net8.0\Questing.dll
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\bin\Debug\net8.0\Questing.pdb
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.csproj.AssemblyReference.cache
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.AssemblyInfoInputs.cache
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.AssemblyInfo.cs
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.csproj.CoreCompileInputs.cache
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.dll
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\refint\Questing.dll
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\Questing.pdb
+C:\Users\jack\OneDrive\Documents\My Games\Terraria\tModLoader\ModSources\Questing\obj\Debug\net8.0\ref\Questing.dll
