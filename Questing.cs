@@ -1,19 +1,25 @@
 using Humanizer;
+using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoMod.Logs;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ReLogic.Content;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using Terraria;
 using Terraria.GameContent;
 using Terraria.GameContent.UI.Elements;
+using Terraria.GameInput;
 using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
@@ -50,13 +56,48 @@ namespace Questing
         }
     }
 
+    public class QuestGlobalItem : GlobalItem
+    {
+        public override bool OnPickup(Item item, Player player)
+        {
+            //ModContent.GetInstance<QuestingSystem>().PlayerInventoryChanged(player);
+            return true;
+        }
+    }
 
+    public class QuestPlayer : ModPlayer
+    {
+        public override void ProcessTriggers(TriggersSet triggersSet)
+        {
+            if (Questing.OpenQuestMenu.JustPressed) // Use JustPressed for a fire-once action
+            {
+                // Put the code you want to run when the key is pressed here
+                ModContent.GetInstance<QuestingSystem>().AlternateUI();
+                // Example: Teleport the player
+                // Player.Teleport(Main.MouseWorld);
+            }
+
+            if (Questing.OpenQuestMenu.Current) // Use Current if the action should happen while the key is held down
+            {
+                // Code for continuous action
+            }
+        }
+    }
     public class Questing : Mod
     {
 
-        public void load()
-        {
+        public static ModKeybind OpenQuestMenu;
 
+        public override void Load()
+        {
+            // Register a new keybind with a unique internal name and a default key (e.g., 'P')
+            OpenQuestMenu = KeybindLoader.RegisterKeybind(this, "ToggleQuestMenu", "Y");
+        }
+
+        public override void Unload()
+        {
+            // Unload the keybind to prevent memory leaks when the mod is disabled
+            OpenQuestMenu = null;
         }
 
         public static int ToID(string Id_)
@@ -83,6 +124,10 @@ namespace Questing
         internal UserInterface MyInterface;
         internal QuestingUIState QuestingUI;
 
+        public override void Load()
+        {
+            
+        }
         public override void PostSetupContent()
         {
             if (!Main.dedServ)
@@ -90,6 +135,7 @@ namespace Questing
                 MyInterface = new UserInterface();
                 QuestingUI = new QuestingUIState();
                 QuestingUI.Activate(); // Activate calls Initialize() on the UIState if not initialized and calls OnActivate, then calls Activate on every child element.
+                QuestingUI.SetupQuestUI();
             }
 
         }
@@ -146,7 +192,14 @@ namespace Questing
             MyInterface?.SetState(null);
         }
 
-
+        public override void PostUpdatePlayers()
+        {
+            QuestUpdate(Main.LocalPlayer);
+        }
+        public void QuestUpdate(Player player)
+        {
+            QuestingUI.QuestUpdate(player);
+        }
     }
     public class QuestingUIState : UIState
     {
@@ -154,10 +207,12 @@ namespace Questing
         Vector2 PanelSize = new Vector2(800, 800);
         public UIPanel QuestPanel;
         QuestPage[] QuestPages;
-
+        List<DependencyLinesUI> DepLines;
         QuestUI[] CurrentPage;
         int PageNumber;
         bool SetupComplete = false;
+        bool QuestsLoaded = false;
+
         public override void OnInitialize()
         {
 
@@ -165,16 +220,27 @@ namespace Questing
             UseImmediateMode = true;
 
         }
+        public void LoadQuests()
+        {
+            string json = LoadJson();
+            ReadJson(json);
+        }
         public void SetupQuestUI()
         {
+            //Main.NewText("Setting Up UI");
+            if (!QuestsLoaded)
+            {
+                LoadQuests();
+                QuestsLoaded = true;
+
+            }
             if (SetupComplete)
             {
                 return;
             }
             SetupComplete = true;
             // debugQuest();
-            string json = LoadJson();
-            ReadJson(json);
+
             LoadPage(0);
             QuestPanel = new UIPanel();
             QuestPanel.Left.Set(PanelPosition.X, 0f);
@@ -188,13 +254,12 @@ namespace Questing
                 QuestPanel.Append(Q);
                 QuestPanel.Append(Q.InitPanel());
                 QuestPanel.Append(Q.InitImage());
-
-
             }
+
         }
         public QuestUI[] GetQuests(int CurrentPage, bool ShowUnavailableQuests = true)
         {
-            Main.NewText($"Converting Quests To UI");
+            //Main.NewText($"Converting Quests To UI");
             QuestUI[] QUI = new QuestUI[QuestPages[CurrentPage].AllQuests.Count()];
             int QuestCount = 0;
             foreach (QuestNode Q in QuestPages[CurrentPage].AllQuests)
@@ -227,6 +292,10 @@ namespace Questing
 
             var Pages = JsonConvert.DeserializeObject<Dictionary<string, Object>>(json);
             QuestPages = new QuestPage[Pages.Keys.Count];
+            List<String> LinesFrom = new List<string>();
+            List<String> LinesTo = new List<string>();
+            DepLines = new List<DependencyLinesUI>();
+
 
             foreach (string key in Pages.Keys)
             {
@@ -234,7 +303,8 @@ namespace Questing
                 QuestPage NewPage = new QuestPage();
                 QuestPages[PageCount] = NewPage;
 
-                var Quests = JsonConvert.DeserializeObject<Dictionary<string, Object>>(Pages[key].ToString());
+                var PageInfo = JsonConvert.DeserializeObject<Dictionary<string, Object>>(Pages[key].ToString());
+                var Quests = JsonConvert.DeserializeObject<Dictionary<string, Object>>(PageInfo["Quests"].ToString());
 
                 NewPage.Load(Quests.Keys.Count, key);
                 PageCount += 1;
@@ -248,16 +318,142 @@ namespace Questing
                     QuestNode NewQuest = new QuestNode(ThisQuest,Quest);
                     NewPage.AllQuests[QuestCount] = NewQuest;
                     QuestCount += 1;
+                    foreach (string Dep in NewQuest.Dependencies)
+                    {
+                        LinesFrom.Add(Quest);
+                        LinesTo.Add(Dep);
+                    }
                 }
             }
             Main.NewText($"Completed Parsing");
+            for (int i = 0; i < LinesFrom.Count();  i++ )
+            {
+                DependencyLinesUI NewLine = new DependencyLinesUI(GetQuest(LinesFrom[i]).Position, GetQuest(LinesTo[i]).Position);
+                DepLines.Add(NewLine);
+            }
         }
 
-        void ExampleQuests()
+        public void QuestUpdate(Player player)
         {
+            if (!SetupComplete)
+            {
+                return;
+            }
+            bool resetUI = false;
+            QuestNode[] UnlockedQuests = GetUnlockedQuests();
+            if (UnlockedQuests == null) {
+                //Main.NewText("No Unlocked Quests");
+                return; 
+            }
+            foreach (QuestNode Node in UnlockedQuests)
+            {
+                bool QuestComplete = true;
+                foreach (CollectQuest Collect in Node.Quests)
+                {
+                    if (Collect.QuestType == "Collect")
+                    {
+                        if (player.CountItem(Collect.ItemId) >= Collect.ItemCount){
+                            Collect.Completed = true;
+                            QuestComplete = true;
+                        }
+                    }
+                    if (!Collect.Completed)
+                    {
+                        QuestComplete = false;
+                    }
+                }
+                if (!Node.Completed && QuestComplete)
+                {
+                    resetUI = true;
+                    Main.NewText($"Quest Complete: {Node.QuestName}");
+                    Node.SetCompleted();
 
+                }
+            }
+            if (resetUI)
+            {
+                ResetUI();
+                SetupQuestUI();
+            }
         }
 
+        public QuestNode[] GetUnlockedQuests()
+        {
+            //Main.NewText("Making New list");
+            List<QuestNode> UnlockedQuests = new List<QuestNode>();
+            //Main.NewText("Making New list");
+            foreach (QuestPage Page in QuestPages)
+            {
+
+                foreach (QuestNode Node in Page.AllQuests)
+                {
+
+                    if (IsQuestUnlocked(Node))
+                    {
+                        UnlockedQuests.Add(Node);
+
+                    }
+                }
+            }
+            //Main.NewText($"Return New List of size: {UnlockedQuests.Count}");
+            return UnlockedQuests.ToArray();
+        }
+
+        public bool IsQuestUnlocked(QuestNode Node)
+        {
+            //Main.NewText(Node.DependencyType);
+            if (Node.DependencyType == "Required")
+            {
+                bool Unlocked = true;
+                foreach (string DependantQ in Node.Dependencies)
+                {
+                    QuestNode DQ = GetQuest(DependantQ);
+                    if (DQ != null && !DQ.Completed)
+                    {
+                        //Main.NewText($"Dependancy Not Complete: {Node.QuestName}");
+                        Unlocked = false;
+                    }
+                }
+                return Unlocked;
+            }
+            else if(Node.DependencyType == "Atleast One")
+            {
+                bool Unlocked = false;
+                foreach (string DependantQ in Node.Dependencies)
+                {
+                    QuestNode DQ = GetQuest(DependantQ);
+                    if (DQ != null && DQ.Completed)
+                    {
+                        //Main.NewText($"Dependancy Not Complete: {Node.QuestName}");
+                        Unlocked = true;
+                    }
+                }
+                return Unlocked;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        public QuestNode GetQuest(string QuestName) {
+            foreach (QuestPage Page in QuestPages)
+            {
+                foreach (QuestNode Node in Page.AllQuests)
+                {
+                    if (Node.QuestName == QuestName)
+                    {
+                        return Node;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void ResetUI()
+        {
+            SetupComplete = false;
+            RemoveAllChildren();
+        }
         public void LoadPage(int PageNum)
         {
             PageNumber = PageNum;
@@ -294,6 +490,7 @@ namespace Questing
     {
         public QuestNode[] AllQuests;
         public String PageName;
+        public Texture2D PageSprite;
 
         public void Load(int Quests,string NewPageName)
         {
@@ -319,18 +516,18 @@ namespace Questing
         Texture2D Sprite;
         public string QuestName;
         string Description;
-        string[] Dependencies;
-        Quest[] Quests;
-        int[] ItemIdRewards;
-        int[] ItemCountRewards;
-        Vector2 Position;
+        public string[] Dependencies;
+        public string DependencyType;
+        public Quest[] Quests;
+        Dictionary<int, int> Rewards;
+        public Vector2 Position;
         public bool Completed;
 
         public QuestNode(Dictionary<string,Object> QuestDict,string NewQuestName)
         {
             QuestName = NewQuestName;
             var SpriteId = Questing.ToID(QuestDict["Sprite"].ToString());
-            Main.NewText($"New SpriteID is: {SpriteId}");
+            //Main.NewText($"New SpriteID is: {SpriteId}");
             Main.instance.LoadItem(SpriteId);
             Sprite = TextureAssets.Item[SpriteId].Value;
             var NewPosition = JsonConvert.DeserializeObject<Dictionary<string, float>>(QuestDict["Position"].ToString());
@@ -344,7 +541,22 @@ namespace Questing
                 Quests[QuestCount] = NewQ;
                 QuestCount++;
             }
-
+            JArray FuckedUp = (JArray)QuestDict["Dependencies"];
+            DependencyType = FuckedUp[0].ToString();
+            Dependencies = new string[FuckedUp.Count - 1];
+            for (int i = 1; i < FuckedUp.Count; i++)
+            {
+                Dependencies[i - 1] = FuckedUp[i].ToString();
+            }
+            if (true)
+            {
+                var TempAwards = JsonConvert.DeserializeObject<Dictionary<string, int>>(QuestDict["Rewards"].ToString());
+                Rewards = new();
+                foreach (string key in TempAwards.Keys)
+                {
+                    Rewards.Add(Questing.ToID(key), TempAwards[key]);
+                }
+            }
         }
 
 
@@ -357,12 +569,17 @@ namespace Questing
             questUI.Completed = Completed;
             return questUI;
         }
+
+        public void SetCompleted()
+        {
+            Completed = true;
+        }
     }
 
     public class Quest
     {
         public string QuestType = "None";
-        bool Completed;
+        public bool Completed;
 
         public void LoadQuest()
         {
@@ -372,8 +589,8 @@ namespace Questing
 
     public class CollectQuest : Quest
     {
-        int ItemId;
-        int ItemCount;
+        public int ItemId;
+        public int ItemCount;
         public CollectQuest(string Item, int Count)
         {
             QuestType = "Collect";
@@ -417,10 +634,12 @@ namespace Questing
             QuestPanel.Height.Set(50, 0f);
             if (Completed) {
                 QuestPanel.BackgroundColor = Color.Green;
+                QuestPanel.BorderColor = Color.LightGreen;
             }
             else
             {
                 QuestPanel.BackgroundColor = Color.Gray;
+                QuestPanel.BorderColor = Color.DarkRed;
             }
             return QuestPanel;
         }
@@ -434,7 +653,68 @@ namespace Questing
         }
     }
 
+    public class DependencyLinesUI : UIElement
+    {
+        public UIImage UILine;
 
+        public DependencyLinesUI(Vector2 FirstNode,Vector2 SecondNode) 
+        {
+            bool useX = false;
+            bool FirstNodeFirst = false;
+            Vector2 StartPoint = new Vector2();
+            Vector2 EndPoint = new Vector2();
+            if (Math.Abs(FirstNode.X - SecondNode.X) > Math.Abs(FirstNode.Y - FirstNode.Y))
+            {
+                useX = true;
+            }
+            if (useX)
+            {
+                if (FirstNode.X - SecondNode.X < 0)
+                {
+                    FirstNodeFirst = true;
+                }
+            }
+            else
+            {
+                if (FirstNode.Y - SecondNode.Y < 0)
+                {
+                    FirstNodeFirst = true;
+                }
+            }
+            if (useX && FirstNodeFirst)
+            {
+                StartPoint = FirstNode + new Vector2(50, 25);
+                EndPoint = SecondNode + new Vector2(0, 25);
+            }else if(!useX && FirstNodeFirst) {
+                StartPoint = FirstNode + new Vector2(25, 50);
+                EndPoint = SecondNode + new Vector2(25, 0);
+            }else if(useX && !FirstNodeFirst)
+            {
+                StartPoint = SecondNode + new Vector2(50, 25);
+                EndPoint = FirstNode + new Vector2(0, 25);
+            }else if(!useX && !FirstNodeFirst)
+            {
+                StartPoint = SecondNode + new Vector2(25, 50);
+                EndPoint = FirstNode + new Vector2(25, 0);
+            }
+
+            float width = (EndPoint - StartPoint).Length();
+            float angle = StartPoint.AngleTo(EndPoint);
+            Main.instance.LoadItem(3);
+            Texture2D newImage = TextureAssets.Item[3].Value;
+            UILine = new UIImage(newImage);
+            UILine.Color = Color.Black;
+            UILine.Left.Set(StartPoint.X, 0f);
+            UILine.Top.Set(StartPoint.Y, 0f);
+            UILine.Width.Set(width, 0f);
+            UILine.Height.Set(2, 0f);
+            UILine.Rotation = angle;
+        }
+        public UIImage GetLine()
+        {
+            return UILine;
+        }
+    }
 }
 
 

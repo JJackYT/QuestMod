@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Questing")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+62755f30d6e51ce45fe786d9c20760d9571f96c2")]
 [assembly: System.Reflection.AssemblyProductAttribute("Questing")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Questing")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -28,10 +28,9 @@
               "RelativeDocumentMoniker": "Content\\Quest.json",
               "ToolTip": "C:\\Users\\jack\\OneDrive\\Documents\\My Games\\Terraria\\tModLoader\\ModSources\\Questing\\Content\\Quest.json",
               "RelativeToolTip": "Content\\Quest.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACcAAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEQAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-12-22T18:17:26.835Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-22T18:17:26.835Z"
             },
             {
               "$type": "Document",
@@ -41,7 +40,7 @@
               "RelativeDocumentMoniker": "Questing.cs",
               "ToolTip": "C:\\Users\\jack\\OneDrive\\Documents\\My Games\\Terraria\\tModLoader\\ModSources\\Questing\\Questing.cs",
               "RelativeToolTip": "Questing.cs",
-              "ViewState": "AgIAALcAAAAAAAAAAAASwNkAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAL8AAAAAAAAAAAAqwNIAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-21T15:19:20.553Z",
               "EditorCaption": ""
